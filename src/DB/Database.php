@@ -47,6 +47,30 @@ final readonly class Database
         return new self($pdo, $config->get('app.env') === 'production' || $config->get('database.freeze'));
     }
 
+    public function migrations(array $directories): Migrations
+    {
+        if (PHP_SAPI !== 'cli') {
+            throw new LogicException('Migrations are available only from the CLI');
+        }
+        return new Migrations($this->pdo, $directories);
+    }
+
+    public function synchronized(string $key, Closure $callback): mixed
+    {
+        $name = hash('sha256', $this->pdo->query('SELECT DATABASE()')->fetchColumn() . ':' . $key);
+        $lock = $this->pdo->prepare('SELECT GET_LOCK(?, 5)');
+        $lock->execute([$name]);
+        if ((int) $lock->fetchColumn() !== 1) {
+            throw new LogicException('Could not acquire the database lock');
+        }
+        try {
+            return $callback();
+        } finally {
+            $release = $this->pdo->prepare('SELECT RELEASE_LOCK(?)');
+            $release->execute([$name]);
+        }
+    }
+
     public function isFrozen(): bool
     {
         return $this->orm->isFrozen();

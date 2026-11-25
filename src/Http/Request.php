@@ -39,6 +39,16 @@ final readonly class Request
         );
     }
 
+    public function validate(array $rules): array
+    {
+        return (new Validator())->validate($this->input(), $rules);
+    }
+
+    public function validateQuery(array $rules): array
+    {
+        return (new Validator())->validate($this->query, $rules);
+    }
+
     public function input(): array
     {
         if (strlen($this->body) > 1_048_576) {

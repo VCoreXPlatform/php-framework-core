@@ -9,6 +9,7 @@ use Core\DB\Database;
 use Core\Http\HttpException;
 use Core\Http\Request;
 use Core\Http\Response;
+use Core\Http\ValidationException;
 use Core\Router\Router;
 use Core\Support\Logger;
 use InvalidArgumentException;
@@ -56,6 +57,8 @@ final readonly class Application
     {
         try {
             return $this->router->dispatch($request, $this->container);
+        } catch (ValidationException $error) {
+            return Response::json(['error' => $error->getMessage(), 'errors' => $error->errors], 422);
         } catch (HttpException $error) {
             return Response::json(['error' => $error->getMessage()], $error->status, $error->headers);
         } catch (Throwable $error) {
